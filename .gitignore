@@ -40,3 +40,6 @@ __pycache__/*
 tex/PGM.pdf
 tex/PGM.pdf
 tex/PGM.pdf
+
+../.DS_Store
+.DS_Store
