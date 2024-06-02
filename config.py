@@ -1,0 +1,5 @@
+GENETRATIONS: float = 20
+EPISODES: int = 20
+GAMMA: float = .98
+
+NUMBER_AGENTS: int = 2

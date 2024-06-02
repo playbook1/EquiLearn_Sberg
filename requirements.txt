@@ -1,2 +1,4 @@
 gymnasium
 torch
+matplotlib
+stable_baselines3
