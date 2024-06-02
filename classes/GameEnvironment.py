@@ -11,10 +11,10 @@ class GameEnvironment(gym.Env):
 
     def __init__(self, alpha, N, T):
 
-        self.N = N
-        self.T = T
-        self.quantity = torch.zeros((self.N,self.T))
-        self.profit = torch.zeros((self.N,self.T))
+        self.N: int = N
+        self.T: int = T
+        self.quantity = torch.zeros((self.N,self.T), dtype = torch.float32)
+        self.profit = torch.zeros((self.N,self.T), dtype = torch.float32)
         self.alpha = alpha
         self.t = 0
 
@@ -55,8 +55,8 @@ class ModelGameEnvironment(GameEnvironment):
 
     def reset(self):
         self.t = 0
-        self.quantity = torch.zeros((self.N,self.T))
-        self.profit = torch.zeros((self.N,self.T))        
+        self.quantity = torch.zeros((self.N,self.T), dtype = torch.float32)
+        self.profit = torch.zeros((self.N,self.T), dtype = torch.float32)        
         return init_state, None, False
 
 
