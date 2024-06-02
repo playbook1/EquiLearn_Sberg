@@ -130,14 +130,21 @@ def rangesplit(s,endrange=50):
 # used for both A and B
 class PayoffMatrix:
     # create zero matrix of given dimensions
-    def __init__(self, m: int, n: int):
-        self.numrows = m
-        self.numcolumns = n
-        self.matrix = torch.zeros( (m,n)) 
-        self.negmatrix = torch.zeros( (m,n)) 
-        self.max = 0
-        self.min = 0
-        self.negshift = 0
+    def __init__(self, A, m: int, n: int):
+        if A:
+            self.matrix = torch.Tensor(A)
+            m,n = self.matrix.shape
+            self.numrows = m
+            self.numcolumns = n
+            # To Fix: self.fullmaxmin() 
+        else:
+            self.numrows = m
+            self.numcolumns = n
+            self.matrix = torch.zeros( (m,n)) 
+            self.negmatrix = torch.zeros( (m,n)) 
+            self.max = 0
+            self.min = 0
+            self.negshift = 0
 
     # create matrix from any numerical matrix
     """
@@ -153,18 +160,11 @@ class PayoffMatrix:
         self.fullmaxmin() """
 
     def __str__(self):
-        buf = columnprint.columnprint(self.numcolumns)
-        for i in range(self.numrows):
-            for j in range(self.numcolumns):
-                buf.sprint(str(self.matrix[i][j]))
-        out = str(buf)
-        out += "\n# max= " + str(self.max) + ", min= " + str(self.min)
-        out += ", negshift= " + str(self.negshift)
-        return out
+        return self.matrix
 
     def updatemaxmin(self, fromrow, fromcol): 
-        m=self.numrows
-        n=self.numcolumns
+        m = self.numrows
+        n = self.numcolumns
         for i in range(fromrow, m):
             for j in range(fromcol, n):
                 elt = self.matrix[i][j]
