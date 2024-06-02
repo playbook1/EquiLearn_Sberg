@@ -1,3 +1,9 @@
-hola a todos
+#######################
+# Game Meta Game
+# Authors: Francisco and Dhivya
+######################
 
-como estas? 
+class MetaGame()
+    
+
+    
