@@ -131,7 +131,7 @@ def rangesplit(s,endrange=50):
 # used for both A and B
 class PayoffMatrix:
     # create zero matrix of given dimensions
-    def __init__(self, A, m: int, n: int):
+    def __init__(self, A, m: int = None, n: int = None):
 
         if A:
             # create matrix from any numerical matrix
@@ -176,32 +176,33 @@ class PayoffMatrix:
         self.matrix = torch.concat((self.matrix, col), dim = 1)
         self.numcolumns += 1
         self.updatemaxmin()
-
+
 class Bimatrix:
     # create A,B given m,n 
-    def __init__(self, m, n):
-        self.A = PayoffMatrix(m,n)
-        self.B = PayoffMatrix(m,n)
+    def __init__(self, filename, m, n):
+        if filename:
+            lines = utils.stripcomments(filename)
+            # flatten into words
+            words = utils.towords(lines)
+            m = int(words[0])
+            n = int(words[1])
+            needfracs =  2*m*n 
+            if len(words) != needfracs + 2:
+                print("in Bimatrix file "+repr(filename)+":")
+                print("m=",n,", n=",n,", need",
+                needfracs,"payoffs, got", len(words)-2)
+                exit(1)
+            k = 2
+            C = utils.tomatrix(m, n, words, k) 
+            self.A = PayoffMatrix(C)
+            k+= m*n
+            C = utils.tomatrix(m, n, words, k) 
+            self.B = PayoffMatrix(C)
+        else:
+            self.A = PayoffMatrix(None, m,n)
+            self.B = PayoffMatrix(None, m,n)
 
-    # create A,B from file
-    def __init__(self, filename):
-        lines = utils.stripcomments(filename)
-        # flatten into words
-        words = utils.towords(lines)
-        m = int(words[0])
-        n = int(words[1])
-        needfracs =  2*m*n 
-        if len(words) != needfracs + 2:
-            print("in Bimatrix file "+repr(filename)+":")
-            print("m=",n,", n=",n,", need",
-               needfracs,"payoffs, got", len(words)-2)
-            exit(1)
-        k = 2
-        C = utils.tomatrix(m, n, words, k) 
-        self.A = PayoffMatrix(C)
-        k+= m*n
-        C = utils.tomatrix(m, n, words, k) 
-        self.B = PayoffMatrix(C)
+
 
     def __str__(self):
         out = "# m,n= \n" + str(self.A.numrows)
