@@ -17,6 +17,7 @@ import random # random.seed
 import classes as cl
 import torch
 
+device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 # for debugging
 def printglobals(): 
     globs = [x for x in globals().keys() if not "__" in x]
@@ -131,13 +132,14 @@ def rangesplit(s,endrange=50):
 class PayoffMatrix:
     # create zero matrix of given dimensions
     def __init__(self, A, m: int, n: int):
-        device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+
         if A:
+            # create matrix from any numerical matrix
             self.matrix = torch.Tensor(A).to(device)
             m,n = self.matrix.shape
             self.numrows = m
             self.numcolumns = n
-            # To Fix: self.fullmaxmin() 
+            self.fullmaxmin() 
         else:
             self.numrows = m
             self.numcolumns = n
@@ -147,49 +149,33 @@ class PayoffMatrix:
             self.min = 0
             self.negshift = 0
 
-    # create matrix from any numerical matrix
-    """
-    def __init__(self, A):
-        AA = np.array(A)
-        m,n = AA.shape
-        self.numrows = m
-        self.numcolumns = n
-        self.matrix = np.zeros( (m,n), dtype=fractions.Fraction) 
-        for i in range(m):
-            for j in range(n):
-                self.matrix[i][j] = utils.tofraction(AA[i][j])
-        self.fullmaxmin() """
-
     def __str__(self):
         return self.matrix
 
-    def updatemaxmin(self, fromrow, fromcol): 
+    def updatemaxmin(self): 
         m = self.numrows
         n = self.numcolumns
-        for i in range(fromrow, m):
-            for j in range(fromcol, n):
-                elt = self.matrix[i][j]
-                self.max = max(self.max, elt)
-                self.min = min(self.min, elt)
+        self.max = torch.max(self.matrix)
+        self.min = torch.min(self.matrix)
         self.negshift = int(self.max)+1
-        self.negmatrix = np.full((m,n),self.negshift,dtype=int)-self.matrix
+        self.negmatrix = torch.full((m,n),self.negshift, dtype=int).to(device) - self.matrix
 
     def fullmaxmin(self):
         self.max = self.matrix[0][0]
         self.min = self.matrix[0][0]
-        self.updatemaxmin(0,0)
+        self.updatemaxmin()
 
     # add full row, row must be of size n
     def addrow(self, row): 
-        self.matrix = np.vstack([self.matrix, row])
+        self.matrix = torch.concat((self.matrix, row), dim = 0)
         self.numrows += 1
-        self.updatemaxmin(self.numrows-1,0)
+        self.updatemaxmin()
 
     # add full column, col must be of size m
     def addcolumn(self, col):
-        self.matrix = np.column_stack([self.matrix, col])
+        self.matrix = torch.concat((self.matrix, col), dim = 1)
         self.numcolumns += 1
-        self.updatemaxmin(0,self.numcolumns-1)
+        self.updatemaxmin()
 
 class Bimatrix:
     # create A,B given m,n 
