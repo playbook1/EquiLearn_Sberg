@@ -131,8 +131,9 @@ def rangesplit(s,endrange=50):
 class PayoffMatrix:
     # create zero matrix of given dimensions
     def __init__(self, A, m: int, n: int):
+        device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
         if A:
-            self.matrix = torch.Tensor(A)
+            self.matrix = torch.Tensor(A).to(device)
             m,n = self.matrix.shape
             self.numrows = m
             self.numcolumns = n
@@ -140,8 +141,8 @@ class PayoffMatrix:
         else:
             self.numrows = m
             self.numcolumns = n
-            self.matrix = torch.zeros( (m,n)) 
-            self.negmatrix = torch.zeros( (m,n)) 
+            self.matrix = torch.zeros( (m,n)).to(device) 
+            self.negmatrix = torch.zeros( (m,n)).to(device) 
             self.max = 0
             self.min = 0
             self.negshift = 0
