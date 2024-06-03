@@ -1,5 +1,5 @@
 #######################
-# Bimatric¡x Class
+# Bimatr¡x Class with sub class PayoffMatrix
 # Init Authors: Bernhard and Sahar 
 # translated to PyTorch and edited by Francisco and Dhivya
 ######################
@@ -11,7 +11,7 @@ import numpy as np
 import fractions
 import utils as utils
 import columnprint as columnprint
-import lemke as lemke
+import Lemke as Lemke
 import randomstart as randomstart
 import random # random.seed
 import classes as cl
@@ -130,12 +130,16 @@ def rangesplit(s,endrange=50):
 
 # used for both A and B
 class PayoffMatrix:
+    """
+        Class that defines a Payoff Matrix for an agent. 
+        It can be created by providing the matrix dimensions or a matrix.
+    """
     # create zero matrix of given dimensions
     def __init__(self, A, m: int = None, n: int = None):
 
         if A:
             # create matrix from any numerical matrix
-            self.matrix = torch.Tensor(A).to(device)
+            self.matrix = torch.Tensor(A, dtype=torch.float64).to(device)
             m,n = self.matrix.shape
             self.numrows = m
             self.numcolumns = n
@@ -143,8 +147,8 @@ class PayoffMatrix:
         else:
             self.numrows = m
             self.numcolumns = n
-            self.matrix = torch.zeros( (m,n)).to(device) 
-            self.negmatrix = torch.zeros( (m,n)).to(device) 
+            self.matrix = torch.zeros( (m,n), dtype=torch.float64).to(device) 
+            self.negmatrix = torch.zeros( (m,n), dtype=torch.float64).to(device) 
             self.max = 0
             self.min = 0
             self.negshift = 0
@@ -178,6 +182,10 @@ class PayoffMatrix:
         self.updatemaxmin()
 
 class Bimatrix:
+    """
+        Class that define a Bimatrix Game. 
+        It can be created using a file or defiing the game dimensions. 
+    """
     # create A,B given m,n 
     def __init__(self, filename, m, n):
         if filename:
@@ -195,7 +203,7 @@ class Bimatrix:
             k = 2
             C = utils.tomatrix(m, n, words, k) 
             self.A = PayoffMatrix(C)
-            k+= m*n
+            k += m*n
             C = utils.tomatrix(m, n, words, k) 
             self.B = PayoffMatrix(C)
         else:
@@ -215,7 +223,7 @@ class Bimatrix:
         m = self.A.numrows
         n = self.A.numcolumns
         lcpdim = m+n+2
-        lcp = lemke.lcp(lcpdim)
+        lcp = Lemke.LCP(lcpdim)
         lcp.q[lcpdim-2] = -1
         lcp.q[lcpdim-1] = -1
         for i in range(m):
@@ -239,7 +247,7 @@ class Bimatrix:
     def runLH(self, droppedlabel):
         lcp = self.createLCP()
         lcp.d[droppedlabel-1] = 0  # subsidize this label
-        tabl = lemke.tableau(lcp)
+        tabl = Lemke.Tableau(lcp)
         # tabl.runlemke(verbose=True, lexstats=True, z0=gz0)
         tabl.runlemke(silent=True)
         return tuple(getequil(tabl))
@@ -267,7 +275,7 @@ class Bimatrix:
         Ay = self.A.negmatrix @ yprior
         xB = xprior @ self.B.negmatrix 
         lcp.d = np.hstack((Ay,xB,[1,1]))
-        tabl = lemke.tableau(lcp)
+        tabl = Lemke.Tableau(lcp)
         tabl.runlemke(silent=True)
         return tuple(getequil(tabl))
 
