@@ -184,7 +184,7 @@ class PayoffMatrix:
 class Bimatrix:
     """
         Class that define a Bimatrix Game. 
-        It can be created using a file or defiing the game dimensions. 
+        It can be created using a file or defining the game dimensions. 
     """
     # create A,B given m,n 
     def __init__(self, filename, m, n):

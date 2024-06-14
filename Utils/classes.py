@@ -5,7 +5,6 @@ import globals as gl
 # from torch.distributions import Categorical
 # from openpyxl import load_workbook
 from fractions import Fraction
-import Bimatrix as Bimatrix
 import time
 import os
 import sqlite3 as sql
@@ -94,108 +93,6 @@ class DataBase():
             high_lst.append(Strategy(strategy_type=StrategyType.sb3_model,model_or_func=model,name=tup[0],memory=tup[2],action_step=tup[3]))
         return low_lst, high_lst
         
-
-
-class BimatrixGame():
-    """
-    strategies play against each other and fill the matrix of payoff, then the equilibria would be computed using Lemke algorithm
-    """
-
-    def __init__(self, low_cost_strategies, high_cost_strategies, env_class) -> None:
-        # globals.initialize()
-        self.low_strategies = low_cost_strategies
-        self.high_strategies = high_cost_strategies
-        self.env_class = env_class
-
-    def reset_matrix(self):
-        self.matrix_A = np.zeros(
-            (len(self.low_strategies), len(self.high_strategies)))
-        self.matrix_B = np.zeros(
-            (len(self.low_strategies), len(self.high_strategies)))
-
-    def fill_matrix(self):
-        self.reset_matrix()
-
-        for low in range(len(self.low_strategies)):
-            for high in range(len(self.high_strategies)):
-                self.update_matrix_entry(low, high)
-
-    def update_matrix_entry(self, low_index, high_index):
-        strt_L = self.low_strategies[low_index]
-        strt_H = self.high_strategies[high_index]
-        strt_L.reset()
-        strt_H.reset()
-
-        env = self.env_class(tuple_costs=(
-            gl.LOW_COST, gl.HIGH_COST), adversary_mixed_strategy=strt_H.to_mixed_strategy(), memory=strt_L.memory)
-        payoffs = [strt_L.play_against(env, strt_H)
-                   for _ in range(gl.NUM_MATRIX_ITER)]
-
-        mean_payoffs = (np.mean(np.array(payoffs), axis=0))
-
-        self.matrix_A[low_index][high_index], self.matrix_B[low_index][high_index] = mean_payoffs[0], mean_payoffs[1]
-
-    def write_all_matrix(self):
-        # print("A: \n", self._matrix_A)
-        # print("B: \n", self._matrix_B)
-
-        output = f"{len(self.matrix_A)} {len(self.matrix_A[0])}\n\n"
-
-        for matrix in [self.matrix_A, self.matrix_B]:
-            for i in range(len(self.matrix_A)):
-                for j in range(len(self.matrix_A[0])):
-                    output += f"{matrix[i][j]:7.0f} "
-                output += "\n"
-            output += "\n"
-
-        with open(f"game_{job_name}.txt", "w") as out:
-            out.write(output)
-
-        output += "\nlow-cost strategies: \n"
-        for strt in self.low_strategies:
-            output += f" {strt.name} "
-        output += "\nhigh-cost strategies: \n"
-        for strt in self.high_strategies:
-            output += f" {strt.name} "
-
-        with open(f"games/game{int(time.time())}.txt", "w") as out:
-            out.write(output)
-
-    def add_low_cost_row(self, row_A, row_B):
-        self.matrix_A = np.append(self.matrix_A, [row_A], axis=0)
-        self.matrix_B = np.append(self.matrix_B, [row_B], axis=0)
-
-    def add_high_cost_col(self, colA, colB):
-        self.matrix_A = np.hstack((self.matrix_A, np.atleast_2d(colA).T))
-        self.matrix_B = np.hstack((self.matrix_B, np.atleast_2d(colB).T))
-        # for j in range(len(self._matrix_A)):
-        #     self._matrix_A[j].append(colA[j])
-        #     self._matrix_B[j].append(colB[j])
-
-    def compute_equilibria(self):
-        self.write_all_matrix()
-        game = Bimatrix.Bimatrix(f"game_{job_name}.txt")
-        equilibria_traces = game.tracing(100, gl.NUM_TRACE_EQUILIBRIA)
-        equilibria = []
-        for equilibrium in equilibria_traces:
-            low_cost_probs, high_cost_probs, low_cost_support, high_cost_support = recover_probs(
-                equilibrium)
-            low_cost_probabilities = return_distribution(
-                len(self.low_strategies), low_cost_probs, low_cost_support)
-            high_cost_probabilities = return_distribution(
-                len(self.high_strategies), high_cost_probs, high_cost_support)
-            low_cost_payoff = np.matmul(low_cost_probabilities, np.matmul(
-                self.matrix_A, np.transpose(high_cost_probabilities)))
-            high_cost_payoff = np.matmul(low_cost_probabilities, np.matmul(
-                self.matrix_B, np.transpose(high_cost_probabilities)))
-
-            result = {"low_cost_probs": low_cost_probabilities,
-                      "high_cost_probs": high_cost_probabilities,
-                      "low_cost_payoff": low_cost_payoff,
-                      "high_cost_payoff": high_cost_payoff}
-            equilibria.append(result)
-        return equilibria
-
 
 class Strategy():
     """
