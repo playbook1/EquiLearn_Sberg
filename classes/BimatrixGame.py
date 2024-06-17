@@ -1,9 +1,11 @@
 import sys
-sys.path.append("../Utils/")
 import numpy as np
-import globals as gl
+sys.path.append("../Utils/")
+import config as cf
 import Bimatrix as Bimatrix
 import time
+from fractions import Fraction
+
 
 class BimatrixGame():
     """
@@ -36,9 +38,9 @@ class BimatrixGame():
         strt_H.reset()
 
         env = self.env_class(tuple_costs=(
-            gl.LOW_COST, gl.HIGH_COST), adversary_mixed_strategy=strt_H.to_mixed_strategy(), memory=strt_L.memory)
+            cf.LOW_COST, cf.HIGH_COST), adversary_mixed_strategy=strt_H.to_mixed_strategy(), memory=strt_L.memory)
         payoffs = [strt_L.play_against(env, strt_H)
-                   for _ in range(gl.NUM_MATRIX_ITER)]
+                   for _ in range(cf.NUM_MATRIX_ITER)]
 
         mean_payoffs = (np.mean(np.array(payoffs), axis=0))
 
@@ -81,10 +83,11 @@ class BimatrixGame():
         #     self._matrix_A[j].append(colA[j])
         #     self._matrix_B[j].append(colB[j])
 
+    
     def compute_equilibria(self):
         self.write_all_matrix()
         game = Bimatrix.Bimatrix(f"game_{job_name}.txt")
-        equilibria_traces = game.tracing(100, gl.NUM_TRACE_EQUILIBRIA)
+        equilibria_traces = game.tracing(100, cf.NUM_TRACE_EQUILIBRIA)
         equilibria = []
         for equilibrium in equilibria_traces:
             low_cost_probs, high_cost_probs, low_cost_support, high_cost_support = recover_probs(
@@ -106,3 +109,25 @@ class BimatrixGame():
         return equilibria
 
 
+def set_job_name(name):
+    global job_name
+    job_name = name
+
+def return_distribution(number_players, cost_probs, cost_support):
+        player_probabilities = [0] * number_players
+        for index, support in enumerate(cost_support):
+            player_probabilities[support] = cost_probs[support]
+        return player_probabilities
+
+def recover_probs(test):
+    low_cost_probs, high_cost_probs, rest = test.split(")")
+    low_cost_probs = low_cost_probs.split("(")[1]
+    _, high_cost_probs = high_cost_probs.split("(")
+    high_cost_probs = [float(Fraction(s)) for s in high_cost_probs.split(',')]
+    low_cost_probs = [float(Fraction(s)) for s in low_cost_probs.split(',')]
+    _, low_cost_support, high_cost_support = rest.split('[')
+    high_cost_support, _ = high_cost_support.split(']')
+    high_cost_support = [int(s) for s in high_cost_support.split(',')]
+    low_cost_support, _ = low_cost_support.split(']')
+    low_cost_support = [int(s) for s in low_cost_support.split(',')]
+    return low_cost_probs, high_cost_probs, low_cost_support, high_cost_support

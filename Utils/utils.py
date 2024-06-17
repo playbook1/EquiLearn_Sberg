@@ -78,3 +78,11 @@ def tomatrix(m, n, words, start):
             C[i][j] = tofraction(words[k])
             k+=1
     return C
+
+def prt(string):
+    """
+    writing the progres into a file instead of print
+    """
+    global job_name
+    with open(f'progress_{job_name}.txt', 'a') as file:
+        file.write("\n"+string)
