@@ -165,30 +165,31 @@ class Tableau:
         for i in range(n): # variables W(i+1) all basic
             self.bascobas[n+1+i] = i
             self.whichvar[i] = n+1+i
+            
         # determine scale factors, lcm of denominators
         for j in range(n+2):
             factor = 1
             for i in range(n):
                 if j==0:
-                    den = Mqd.d[i].denominator
+                    den = fractions.Fraction(Mqd.d[i].item()).denominator
                 elif j==n+1: # RHS
-                    den = Mqd.q[i].denominator
+                    den = fractions.Fraction(Mqd.q[i].item()).denominator
                 else:
-                    den = Mqd.M[i][j-1].denominator
+                    den = fractions.Fraction(Mqd.M[i][j-1].item()).denominator
                 # least common multiple
                 factor *= den // math.gcd(factor,den)
             self.scalefactor[j] = factor
             # fill in column j of A
             for i in range(n):
                 if j==0:
-                    den = Mqd.d[i].denominator
-                    num = Mqd.d[i].numerator
+                    den = fractions.Fraction(Mqd.d[i].item()).denominator
+                    num = fractions.Fraction(Mqd.d[i].item()).numerator
                 elif j==n+1: # RHS
-                    den = Mqd.q[i].denominator
-                    num = Mqd.q[i].numerator
+                    den = fractions.Fraction(Mqd.q[i].item()).denominator
+                    num = fractions.Fraction(Mqd.q[i].item()).numerator
                 else:
-                    den = Mqd.M[i][j-1].denominator
-                    num = Mqd.M[i][j-1].numerator
+                    den = fractions.Fraction(Mqd.M[i][j-1].item()).denominator
+                    num = fractions.Fraction(Mqd.M[i][j-1].item()).numerator
                 self.A[i][j] = (factor//den) * num 
             self.determinant = -1
         return

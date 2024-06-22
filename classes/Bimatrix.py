@@ -147,7 +147,7 @@ class PayoffMatrix:
         else:
             self.numrows = m
             self.numcolumns = n
-            self.matrix = torch.zeros( (m,n), dtype=torch.float64).to(device) 
+            self.matrix = torch.rand( (m,n), dtype=torch.float64).to(device) 
             self.negmatrix = torch.zeros( (m,n), dtype=torch.float64).to(device) 
             self.max = 0
             self.min = 0
@@ -215,8 +215,8 @@ class Bimatrix:
     def __str__(self):
         out = "# m,n= \n" + str(self.A.numrows)
         out += " " + str(self.A.numcolumns)
-        out += "\n# A= \n" + str(self.A)
-        out += "\n# B= \n" + str(self.B)
+        out += f"\n# A= \n {self.A.matrix}"
+        out += f"\n# B= {self.B.matrix}"
         return out
 
     def createLCP(self):
@@ -249,7 +249,7 @@ class Bimatrix:
         lcp.d[droppedlabel-1] = 0  # subsidize this label
         tabl = Lemke.Tableau(lcp)
         # tabl.runlemke(verbose=True, lexstats=True, z0=gz0)
-        tabl.runlemke(silent=True)
+        tabl.runlemke(silent=False)
         return tuple(getequil(tabl))
         
     def LH(self, LHstring):
@@ -373,7 +373,8 @@ if __name__ == "__main__":
     processArguments()
     printglobals()
 
-    G = Bimatrix(gamefilename)
+    G = Bimatrix(None, 3,3)
     print(G)
+
     eqset = G.LH(LHstring)
     eqset = G.tracing(trace)
