@@ -52,7 +52,7 @@ def printout(*s):
     print(*s, file=filehandle) 
 
 # LCP data M,q,d
-class LCP: 
+class LinearComplementarityProblem: 
     """ Class that creates an Linear Complementarity Problem method
          either with given n or from file
 
@@ -63,6 +63,7 @@ class LCP:
             self.M = torch.zeros( (n,n)).to(device) 
             self.q = torch.zeros( (n,)).to(device)
             self.d = torch.zeros( (n,)).to(device)
+
         else: # assume arg is a string = name of lcp file
             # create LCP from file
             filename = arg
@@ -94,6 +95,7 @@ class LCP:
                 if words[k]=="M=":
                     k+=1
                     auxM = utils.tomatrix(n,n,words,k)
+                    print(auxM)
                     k+= n*n
                 elif words[k]=="q=":
                     k+=1
@@ -107,6 +109,7 @@ class LCP:
                     printout("in lcp file "+repr(filename)+":")
                     printout("expected one of 'M=' 'q=' 'd=', got",repr(words[k]))
                     exit(1)
+
             self.M = torch.Tensor(auxM, dtype=torch.float64).to(device)
             self.q = torch.Tensor(auxq, dtype=torch.float64).to(device)
             self.d = torch.Tensor(auxd, dtype=torch.float64).to(device)         
@@ -140,6 +143,7 @@ class Tableau:
     # filling the tableau from the LCP instance Mqd
     def __init__(self, Mqd): 
         self.n = Mqd.n
+
         n = self.n
         self.scalefactor = [0]*(n+2) # 0 for z0, n+1 for RHS
         # A = tableau, long integer entries
@@ -171,25 +175,25 @@ class Tableau:
             factor = 1
             for i in range(n):
                 if j==0:
-                    den = fractions.Fraction(Mqd.d[i].item()).denominator
+                    den = fractions.Fraction(str(Mqd.d[i].item())).denominator
                 elif j==n+1: # RHS
-                    den = fractions.Fraction(Mqd.q[i].item()).denominator
+                    den = fractions.Fraction(str(Mqd.q[i].item())).denominator
                 else:
-                    den = fractions.Fraction(Mqd.M[i][j-1].item()).denominator
+                    den = fractions.Fraction(str(Mqd.M[i][j-1].item())).denominator
                 # least common multiple
                 factor *= den // math.gcd(factor,den)
             self.scalefactor[j] = factor
             # fill in column j of A
             for i in range(n):
                 if j==0:
-                    den = fractions.Fraction(Mqd.d[i].item()).denominator
-                    num = fractions.Fraction(Mqd.d[i].item()).numerator
+                    den = fractions.Fraction(str(Mqd.d[i].item())).denominator
+                    num = fractions.Fraction(str(Mqd.d[i].item())).numerator
                 elif j==n+1: # RHS
-                    den = fractions.Fraction(Mqd.q[i].item()).denominator
-                    num = fractions.Fraction(Mqd.q[i].item()).numerator
+                    den = fractions.Fraction(str(Mqd.q[i].item())).denominator
+                    num = fractions.Fraction(str(Mqd.q[i].item())).numerator
                 else:
-                    den = fractions.Fraction(Mqd.M[i][j-1].item()).denominator
-                    num = fractions.Fraction(Mqd.M[i][j-1].item()).numerator
+                    den = fractions.Fraction(str(Mqd.M[i][j-1].item())).denominator
+                    num = fractions.Fraction(str(Mqd.M[i][j-1].item())).numerator
                 self.A[i][j] = (factor//den) * num 
             self.determinant = -1
         return
@@ -241,6 +245,7 @@ class Tableau:
                     num *= self.scalefactor[i] 
                 self.solution[i] = fractions.Fraction(num,
                     self.determinant*self.scalefactor[n+1])
+
             else: # i is nonbasic
                 self.solution[i]=fractions.Fraction(0)
    
@@ -468,7 +473,7 @@ class Tableau:
         self.whichvar[row]   = enter
     ###### end of  pivot (leave, enter) 
 
-    def runlemke(self,*,verbose=False,lexstats=False,z0=False,silent=False):
+    def runLemkeHowson(self,*,verbose=False,lexstats=False,z0=False,silent=False):
         global filehandle
         # z0: printout value of z0
         # flags.maxcount   = 0;
@@ -538,7 +543,7 @@ if __name__ == "__main__":
     processArguments()
     printout (f"verbose={verbose} lcpfilename={lcpfilename} silent={silent} z0={z0}")
     # printout (f"{verbose}= {lcpfilename}= {silent}= {z0}=")
-    m = LCP(lcpfilename)
+    m = LinearComplementarityProblem(lcpfilename)
     printout(m)
     printout("==================================")
     tabl = Tableau(m)

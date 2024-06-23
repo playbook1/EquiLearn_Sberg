@@ -147,7 +147,7 @@ class PayoffMatrix:
         else:
             self.numrows = m
             self.numcolumns = n
-            self.matrix = torch.rand( (m,n), dtype=torch.float64).to(device) 
+            self.matrix = torch.rand( (m,n), dtype=torch.float64).to(device)*100
             self.negmatrix = torch.zeros( (m,n), dtype=torch.float64).to(device) 
             self.max = 0
             self.min = 0
@@ -219,11 +219,11 @@ class Bimatrix:
         out += f"\n# B= {self.B.matrix}"
         return out
 
-    def createLCP(self):
+    def createLinearComplementarityProblem(self):
         m = self.A.numrows
         n = self.A.numcolumns
         lcpdim = m+n+2
-        lcp = Lemke.LCP(lcpdim)
+        lcp = Lemke.LinearComplementarityProblem(lcpdim)
         lcp.q[lcpdim-2] = -1
         lcp.q[lcpdim-1] = -1
         for i in range(m):
@@ -244,40 +244,43 @@ class Bimatrix:
         return lcp
 
 
-    def runLH(self, droppedlabel):
-        lcp = self.createLCP()
+    def runLemkeHowson(self, droppedlabel):
+        lcp = self.createLinearComplementarityProblem()
         lcp.d[droppedlabel-1] = 0  # subsidize this label
-        tabl = Lemke.Tableau(lcp)
+        tableau = Lemke.Tableau(lcp)
         # tabl.runlemke(verbose=True, lexstats=True, z0=gz0)
-        tabl.runlemke(silent=False)
-        return tuple(getequil(tabl))
+        tableau.runLemkeHowson(silent=False)
+        return tuple(getequil(tableau))
         
-    def LH(self, LHstring):
+    def LemkeHowson(self, LHstring):
         if LHstring == "":
             return
+        
         m = self.A.numrows
         n = self.A.numcolumns
         lhset = {} # dict of equilibria and list by which label found
         labels = rangesplit(LHstring, m+n)
+
         for k in labels:
-            eq = self.runLH(k)
+            eq = self.runLemkeHowson(k)
             if eq in lhset:
                 lhset[eq].append(k)
             else:
                 print ("label",k,"found eq", str_eq(eq,m,n))
                 lhset[eq] = [k] 
+                
         for eq in lhset:
             print (str_eq(eq,m,n),"found by labels", str(lhset[eq]))
         return lhset
 
     def runtrace(self, xprior, yprior):
-        lcp = self.createLCP()
+        lcp = self.createLinearComplementarityProblem()
         Ay = self.A.negmatrix @ yprior
         xB = xprior @ self.B.negmatrix 
         lcp.d = np.hstack((Ay,xB,[1,1]))
-        tabl = Lemke.Tableau(lcp)
-        tabl.runlemke(silent=True)
-        return tuple(getequil(tabl))
+        tableau = Lemke.Tableau(lcp)
+        tableau.runLemkeHowson(silent=True)
+        return tuple(getequil(tableau))
 
     def tracing(self, trace,equi_num=1):
         """
@@ -346,9 +349,9 @@ class Bimatrix:
 def uniform(n):
     return np.array([ fractions.Fraction(1,n) for j in range(n)])
 
-def getequil(tabl):
-    tabl.createsol()
-    return tabl.solution[1:tabl.n-1]
+def getequil(tableau):
+    tableau.createsol()
+    return tableau.solution[1:tableau.n-1]
 
 def str_eq(eq,m,n):
     x = "("+",".join([str(x) for x in eq[0:m]])+")"
@@ -376,5 +379,5 @@ if __name__ == "__main__":
     G = Bimatrix(None, 3,3)
     print(G)
 
-    eqset = G.LH(LHstring)
+    eqset = G.LemkeHowson(LHstring)
     eqset = G.tracing(trace)
