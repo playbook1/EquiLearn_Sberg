@@ -33,6 +33,7 @@ class ModelGameEnvironment(GameEnvironment):
     def __init__(self, alpha, N, gamma, T):
         super().__init__(alpha, N, T)
         self.gamma = gamma
+        self.init_state = torch.Tensor([50,50])
 
     def step(self, action_profile):
 
@@ -40,7 +41,7 @@ class ModelGameEnvironment(GameEnvironment):
         for agent in range(0,self.N):
             self.quantity[agent,self.t] = action_profile[agent]
 
-        total_demand = action_profile.sum()
+        total_demand = torch.sum(action_profile)
         for agent in range(0,self.N):
             self.profit[agent,self.t] = action_profile[agent]*(self.alpha-total_demand)
         
@@ -57,7 +58,7 @@ class ModelGameEnvironment(GameEnvironment):
         self.t = 0
         self.quantity = torch.zeros((self.N,self.T), dtype = torch.float32)
         self.profit = torch.zeros((self.N,self.T), dtype = torch.float32)        
-        return init_state, None, False
+        return self.init_state, None, False
 
 
 
