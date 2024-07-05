@@ -65,10 +65,9 @@ class ActorCritic:
         critic_loss.backward()
         self.critic_optimizer.step()
         
-
         advantage = (target - value).detach()
         actor_loss = -log_prob * advantage
-        print(actor_loss)
+  
         self.actor_optimizer.zero_grad()
         actor_loss.backward()
         self.actor_optimizer.step()
