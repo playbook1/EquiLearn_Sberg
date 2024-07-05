@@ -33,8 +33,9 @@ class Critic(nn.Module):
         return x
     
 class ActorCritic:
-    def __init__(self, actor, critic, device, actor_lr=1e-3, critic_lr=1e-3, discount):
+    def __init__(self, actor, critic, discount, actor_lr=1e-3, critic_lr=1e-3):
         self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+        self.discount = discount
         self.actor = actor.to(self.device)
         self.critic = critic.to(self.device)
         self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=actor_lr)
@@ -57,7 +58,7 @@ class ActorCritic:
         # Critic update
         value = self.critic(state)
         next_value = self.critic(next_state)
-        target = reward + discount * next_value
+        target = reward + self.discount * next_value
         critic_loss = (target - value) ** 2
         self.critic_optimizer.zero_grad()
         critic_loss.backward()
