@@ -15,8 +15,9 @@ def initialize():
     # global BATCH_UPDATE_SIZE, BUFFER_PLAY_COEFFICIENT, NUM_PROCESS, NUM_MODEL_SAVE
     global CON_ACTIONS_RANGE, MODELS_DIR, LOG_DIR, NUM_TRACE_EQUILIBRIA, GAMES_DIR, NUM_PROCESS
     global SPE_A, SPE_a, SPE_B, SPE_b, SPE_K, SPE_k, SPE_z, SPE_Y
+    global ALPHA, DELTA
 
-    TOTAL_DEMAND = 400
+    TOTAL_DEMAND = 100
     LOW_COST = 57
     HIGH_COST = 71
     TOTAL_STAGES = 25
@@ -46,6 +47,10 @@ def initialize():
     LOG_DIR = "logs"
     GAMES_DIR = "games"
 
+
+    # new global settings
+    ALPHA = 0.5
+    DELTA = 0.1
     # SPE coefficients
 
     SPE_a = [np.nan]*25

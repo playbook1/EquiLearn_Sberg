@@ -3,9 +3,24 @@ import gymnasium as gym
 import numpy as np 
 import config as cf
 from gymnasium import spaces
+from numpy.random import choice
 
 
 class MemorylessPricingGame(gym.env):
+    # The base game has 2 players playing a pricing game
+    # U1 = x(100+ay-x)
+    # U2 = y(100+ax-y)
+    # Best response equilibrium : x = y = 100/(2-a)
+    # Total utility = x^2 + y^2
+    # Collusive strategy equilibrium : x = y = 50/(1-a)
+    # Higher total utility, higher individual utility
+
+    # An episode - repeated base game - say m rounds
+    # there's a discount factor - a probability 'd' with which each of the m rounds might be the end of an episode.
+    # State of the base game : Accumulated utility, who's the opponent?, how many stages so far in the episode?, is this the end? 
+    # Action: best strategy against the opponent 
+    # Step: update utility based on action, move to next stage/ the end. 
+
     
     def __init__(self,tuple_costs, adversary_mixed_strategy, memory):
         super().__init__()
@@ -14,19 +29,16 @@ class MemorylessPricingGame(gym.env):
         self.action_step=None
 
         self.total_demand = cf.TOTAL_DEMAND
-        self.costs = tuple_costs
-        self.T = cf.TOTAL_STAGES
-        self.demand_potential = None # two lists for the two players
+        self.alpha = cf.ALPHA
+        #self.T = 0 total number of stages 
         self.prices = None # prices over rounds
-        self.profit = None  # profit in each round
+        self.total_utility = None  # profit in each round
         self.stage = None
         self.done = False
         
         self.adversary_mixed_strategy = adversary_mixed_strategy
         #memory of both players
         self.memory=memory
-        # self.state_adv_history = gl.NUM_ADV_HISTORY
-        self.reward_division = cf.REWARDS_DIVISION_CONST
 
         self.action_space = spaces.Box(low=0, high=cf.CON_ACTIONS_RANGE, shape=(1,))
         
@@ -53,13 +65,9 @@ class MemorylessPricingGame(gym.env):
         self.episodesMemory = list()
         self.stage = 0
         self.done = False
-        self.demand_potential = [
-            [0]*(self.T+1), [0]*(self.T+1)]  # two lists for the two players
         self.prices = [[0]*self.T, [0]*self.T]  # prices over T rounds
-        self.myopic_prices = [[0]*self.T, [0]*self.T]  # prices over T rounds
-        self.profit = [[0]*self.T, [0]*self.T]  # profit in each of T rounds
+        self.total_utility = [[0]*self.T, [0]*self.T]  # utility in each of T rounds
         # initialize first round 0
-        self.demand_potential[0][0] = self.demand_potential[1][0] = self.total_demand / 2
         self.actions=[0]*self.T
     
     def get_state(self, stage, player=0, memory=None):
@@ -102,9 +110,9 @@ class MemorylessPricingGame(gym.env):
             env=self, player=1)
         self.update_game_variables( [self.myopic() - action[0], adversary_action] ) 
 
-        done = (self.stage == self.T-1)
+        done = choice([True, False], 1, [1-cf.DELTA, cf.DELTA])
 
-        reward = self.profit[0][self.stage]
+        reward = self.total_utility[0][self.stage]
         self.stage += 1
 
         info = {}
@@ -122,19 +130,18 @@ class MemorylessPricingGame(gym.env):
 
         for player in [0,1]:
             price = price_pair[player]
-            if price<self.costs[player]:
-                price = self.costs[player]
-            elif price > self.demand_potential[player][self.stage]:
-                price = self.demand_potential[player][self.stage]
+         
             self.prices[player][self.stage] = price
-            self.profit[player][self.stage] = (self.demand_potential[player][self.stage] - price) * (price - self.costs[player])/self.reward_division
+            self.total_utility[player][self.stage] = self.total_utility[player][self.stage] + self.getUtilityGained(price_pair, player)
 
-        for player in [0,1]:
-            if self.stage < self.T - 1 :
-                self.demand_potential[player][ self.stage + 1] = \
-                    self.demand_potential[player][self.stage] + (self.prices[1-player][self.stage] - self.prices[player][self.stage])/2
-                
 
+    def getUtilityGained(price_pair, player):
+        if player == 0:
+            opponent = 1
+        else:
+            opponent = 0
+        return price_pair[player] * (cf.TOTAL_DEMAND + cf.ALPHA * price_pair[opponent] - price_pair[player])
+    
 
     # def myopic(self, player = 0): 
     #     """
