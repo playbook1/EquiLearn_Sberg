@@ -1,7 +1,7 @@
 #######################
 # Bimatr¡x Class with sub class PayoffMatrix
 # Init Authors: Bernhard and Sahar 
-# translated to PyTorch and edited by Francisco and Dhivya
+# translated to ** and edited by Francisco and Dhivya
 ######################
 
 
@@ -15,9 +15,22 @@ import Lemke as Lemke
 import randomstart as randomstart
 import random # random.seed
 import classes as cl
-import torch
 
-device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+
+class Equi():
+    def __init__(self,row_probs,col_probs,row_payoff,col_payoff,row_support,col_support, found=1):
+        self.row_probs=row_probs
+        self.col_probs=col_probs
+        self.row_payoff=row_payoff
+        self.col_payoff=col_payoff
+        self.row_support=row_support
+        self.col_support=col_support
+        self.found=found
+    def __str__(self) -> str:
+        row_sup= [f"{i}: {self.row_probs[i]:.3f}" for i in self.row_support]
+        col_sup= [f"{i}: {self.col_probs[i]:.3f}" for i in self.col_support]
+        return f"[{', '.join(row_sup)}]x[{', '.join(col_sup)}]\nfound: {self.found}, payoff=({self.row_payoff:.2f},{self.col_payoff:.2f})"
+
 # for debugging
 def printglobals(): 
     globs = [x for x in globals().keys() if not "__" in x]
@@ -42,6 +55,7 @@ seed = -1
 trace = -1 # negative: no tracing
 # accuracy = DEFAULT_accuracy = 1000
 accuracy = 1000
+
 
 # amends defaults
 def processArguments():
@@ -135,51 +149,65 @@ class PayoffMatrix:
         It can be created by providing the matrix dimensions or a matrix.
     """
     # create zero matrix of given dimensions
-    def __init__(self, A, m: int = None, n: int = None):
+    def __init__(self, m, n):
+        self.numrows = m
+        self.numcolumns = n
+        self.matrix = np.zeros( (m,n), dtype=fractions.Fraction) 
+        self.negmatrix = np.zeros( (m,n), dtype=fractions.Fraction) 
+        self.max = 0
+        self.min = 0
+        self.negshift = 0
 
-        if A:
-            # create matrix from any numerical matrix
-            self.matrix = torch.Tensor(A, dtype=torch.float64).to(device)
-            m,n = self.matrix.shape
-            self.numrows = m
-            self.numcolumns = n
-            self.fullmaxmin() 
-        else:
-            self.numrows = m
-            self.numcolumns = n
-            self.matrix = torch.rand( (m,n), dtype=torch.float64).to(device)*100
-            self.negmatrix = torch.zeros( (m,n), dtype=torch.float64).to(device) 
-            self.max = 0
-            self.min = 0
-            self.negshift = 0
+    # create matrix from any numerical matrix
+    def __init__(self, A):
+        AA = np.array(A)
+        m,n = AA.shape
+        self.numrows = m
+        self.numcolumns = n
+        self.matrix = np.zeros( (m,n), dtype=fractions.Fraction) 
+        for i in range(m):
+            for j in range(n):
+                self.matrix[i][j] = utils.tofraction(AA[i][j])
+        self.fullmaxmin() 
 
     def __str__(self):
-        return self.matrix
+        buf = columnprint.columnprint(self.numcolumns)
+        for i in range(self.numrows):
+            for j in range(self.numcolumns):
+                buf.sprint(str(self.matrix[i][j]))
+        out = str(buf)
+        out += "\n# max= " + str(self.max) + ", min= " + str(self.min)
+        out += ", negshift= " + str(self.negshift)
+        return out
 
-    def updatemaxmin(self): 
-        m = self.numrows
-        n = self.numcolumns
-        self.max = torch.max(self.matrix)
-        self.min = torch.min(self.matrix)
+    def updatemaxmin(self, fromrow, fromcol): 
+        m=self.numrows
+        n=self.numcolumns
+        for i in range(fromrow, m):
+            for j in range(fromcol, n):
+                elt = self.matrix[i][j]
+                self.max = max(self.max, elt)
+                self.min = min(self.min, elt)
         self.negshift = int(self.max)+1
-        self.negmatrix = torch.full((m,n),self.negshift, dtype=int).to(device) - self.matrix
+        self.negmatrix = np.full((m,n),self.negshift,dtype=int)-self.matrix
 
     def fullmaxmin(self):
         self.max = self.matrix[0][0]
         self.min = self.matrix[0][0]
-        self.updatemaxmin()
+        self.updatemaxmin(0,0)
 
     # add full row, row must be of size n
     def addrow(self, row): 
-        self.matrix = torch.concat((self.matrix, row), dim = 0)
+        self.matrix = np.vstack([self.matrix, row])
         self.numrows += 1
-        self.updatemaxmin()
+        self.updatemaxmin(self.numrows-1,0)
 
     # add full column, col must be of size m
     def addcolumn(self, col):
-        self.matrix = torch.concat((self.matrix, col), dim = 1)
+        self.matrix = np.column_stack([self.matrix, col])
         self.numcolumns += 1
-        self.updatemaxmin()
+        self.updatemaxmin(0,self.numcolumns-1)
+
 
 class Bimatrix:
     """
@@ -187,39 +215,38 @@ class Bimatrix:
         It can be created using a file or defining the game dimensions. 
     """
     # create A,B given m,n 
-    def __init__(self, filename, m, n):
-        if filename:
-            lines = utils.stripcomments(filename)
-            # flatten into words
-            words = utils.towords(lines)
-            m = int(words[0])
-            n = int(words[1])
-            needfracs =  2*m*n 
-            if len(words) != needfracs + 2:
-                print("in Bimatrix file "+repr(filename)+":")
-                print("m=",n,", n=",n,", need",
-                needfracs,"payoffs, got", len(words)-2)
-                exit(1)
-            k = 2
-            C = utils.tomatrix(m, n, words, k) 
-            self.A = PayoffMatrix(C)
-            k += m*n
-            C = utils.tomatrix(m, n, words, k) 
-            self.B = PayoffMatrix(C)
-        else:
-            self.A = PayoffMatrix(None, m,n)
-            self.B = PayoffMatrix(None, m,n)
+    def __init__(self, m, n):
+        self.A = PayoffMatrix(m,n)
+        self.B = PayoffMatrix(m,n)
 
-
+    # create A,B from file
+    def __init__(self, filename):
+        lines = utils.stripcomments(filename)
+        # flatten into words
+        words = utils.towords(lines)
+        m = int(words[0])
+        n = int(words[1])
+        needfracs =  2*m*n 
+        if len(words) != needfracs + 2:
+            print("in bimatrix file "+repr(filename)+":")
+            print("m=",n,", n=",n,", need",
+               needfracs,"payoffs, got", len(words)-2)
+            exit(1)
+        k = 2
+        C = utils.tomatrix(m, n, words, k) 
+        self.A = PayoffMatrix(C)
+        k+= m*n
+        C = utils.tomatrix(m, n, words, k) 
+        self.B = PayoffMatrix(C)
 
     def __str__(self):
         out = "# m,n= \n" + str(self.A.numrows)
         out += " " + str(self.A.numcolumns)
-        out += f"\n# A= \n {self.A.matrix}"
-        out += f"\n# B= {self.B.matrix}"
+        out += "\n# A= \n" + str(self.A)
+        out += "\n# B= \n" + str(self.B)
         return out
 
-    def createLinearComplementarityProblem(self):
+    def createLCP(self):
         m = self.A.numrows
         n = self.A.numcolumns
         lcpdim = m+n+2
@@ -244,45 +271,42 @@ class Bimatrix:
         return lcp
 
 
-    def runLemkeHowson(self, droppedlabel):
-        lcp = self.createLinearComplementarityProblem()
+    def runLH(self, droppedlabel):
+        lcp = self.createLCP()
         lcp.d[droppedlabel-1] = 0  # subsidize this label
-        tableau = Lemke.Tableau(lcp)
+        tabl = Lemke.Tableau(lcp)
         # tabl.runlemke(verbose=True, lexstats=True, z0=gz0)
-        tableau.runLemkeHowson(silent=False)
-        return tuple(getequil(tableau))
+        tabl.runlemke(silent=True)
+        return tuple(getequil(tabl))
         
-    def LemkeHowson(self, LHstring):
+    def LH(self, LHstring):
         if LHstring == "":
             return
-        
         m = self.A.numrows
         n = self.A.numcolumns
         lhset = {} # dict of equilibria and list by which label found
         labels = rangesplit(LHstring, m+n)
-
         for k in labels:
-            eq = self.runLemkeHowson(k)
+            eq = self.runLH(k)
             if eq in lhset:
                 lhset[eq].append(k)
             else:
                 print ("label",k,"found eq", str_eq(eq,m,n))
                 lhset[eq] = [k] 
-                
         for eq in lhset:
             print (str_eq(eq,m,n),"found by labels", str(lhset[eq]))
         return lhset
 
     def runtrace(self, xprior, yprior):
-        lcp = self.createLinearComplementarityProblem()
+        lcp = self.createLCP()
         Ay = self.A.negmatrix @ yprior
         xB = xprior @ self.B.negmatrix 
         lcp.d = np.hstack((Ay,xB,[1,1]))
-        tableau = Lemke.Tableau(lcp)
-        tableau.runLemkeHowson(silent=True)
-        return tuple(getequil(tableau))
+        tabl = Lemke.Tableau(lcp)
+        tabl.runlemke(silent=True)
+        return tuple(getequil(tabl))
 
-    def tracing(self, trace,equi_num=1):
+    def tracing(self, trace):
         """
         trace: number of iterations
         equi_num: the number of most frequent equilibria
@@ -316,20 +340,30 @@ class Bimatrix:
                     trset[eq] = 1 
         sorted_trset=sorted(trset.items(), key=lambda x: x[1], reverse=True)
 
-        cl.prt("\n all equilibria: \n")
-        for eq in sorted_trset:
-            cl.prt(str_eq(eq[0], m,n)+ ", found: "+ str(eq[1])+"\n")
+        
 
         equilibria = []
-        equilibria_num=min(equi_num,len(sorted_trset))
-        times_found = 0
-        for i in range(equilibria_num):
-            if sorted_trset[i][1] > times_found:
-                equilibria.append(str_eq(sorted_trset[i][0], m,n))
+
+        for i in range(len(sorted_trset)):
+            if sorted_trset[i][1] > 0:
+                equilibria.append(self.set_equi(sorted_trset[i]))
 #             print (trset[eq],"times found ",str_eq(eq,m,n))
 #         print(trace,"total priors,",len(trset),"equilibria found")
         return equilibria
-
+    def set_equi(self,dict_item)-> Equi:
+        found=dict_item[1]
+        eq=dict_item[0]
+        m = self.A.numrows
+        n = self.A.numcolumns
+        row_probs=[float(i) for i in eq[0:m]]
+        col_probs=[float(i) for i in eq[m:m+n]]
+        row_support,col_support = supports(eq,m,n)
+        row_payoff = np.matmul(row_probs, np.matmul(
+            self.A.matrix, np.transpose(col_probs)))
+        col_payoff = np.matmul(row_probs, np.matmul(
+            self.B.matrix, np.transpose(col_probs)))
+        return Equi(row_probs,col_probs,row_payoff,col_payoff,row_support,col_support,found)
+        
     def eqindex(self,eq,m,n):
         rowset,colset = supports(eq,m,n)
         k,l = len(rowset),len(colset)

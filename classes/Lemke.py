@@ -1,13 +1,13 @@
 ###################
 # LCP class solver
-# By: Bernhard and Sahar edited for PyTorch Dhivya and Francsico
+# By: Bernhard and Sahar edited to ** Dhivya and Francsico
 ###################
 
 import sys
 sys.path.append("../Utils/")
 import fractions 
 import math # gcd
-import torch
+
 import columnprint as columnprint
 import utils as utils
 
@@ -18,7 +18,7 @@ filehandle = sys.stdout
 verbose=False
 silent=False
 z0=False
-device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+
 # process command-line arguments
 def processArguments():
     global lcpfilename,outfile,filehandle,verbose,silent,z0
@@ -50,20 +50,25 @@ options: -v, -verbose : printout intermediate tableaus
 
 def printout(*s):
     print(*s, file=filehandle) 
-
+
 # LCP data M,q,d
 class LinearComplementarityProblem: 
     """ Class that creates an Linear Complementarity Problem method
          either with given n or from file
 
     """
+    # create LCP either with given n or from file
     def __init__(self, arg): 
         if isinstance(arg, int): # arg is an integer
             n = self.n = arg
-            self.M = torch.zeros( (n,n)).to(device) 
-            self.q = torch.zeros( (n,)).to(device)
-            self.d = torch.zeros( (n,)).to(device)
-
+            # self.M = np.zeros( (n,n), dtype=fractions.Fraction)
+            # self.q = np.zeros( (n), dtype=fractions.Fraction)
+            # self.d = np.zeros( (n), dtype=fractions.Fraction)
+            self.M = [[]]*n
+            for i in range(n):
+                self.M[i]=[0]*n
+            self.q = [0]*n
+            self.d = [0]*n
         else: # assume arg is a string = name of lcp file
             # create LCP from file
             filename = arg
@@ -80,9 +85,11 @@ class LinearComplementarityProblem:
             # self.M = np.zeros( (n,n), dtype=fractions.Fraction)
             # self.d = np.zeros( (n), dtype=fractions.Fraction)
             # self.q = np.zeros( (n), dtype=fractions.Fraction)
-            self.M = None
-            self.q = None
-            self.d = None
+            self.M = [[]]*n
+            for i in range(n):
+                self.M[i]=[0]*n
+            self.q = [0]*n
+            self.d = [0]*n
             needfracs =  n*n + 2*n 
             if len(words) != needfracs + 5:
                 # printout("in lcp file '",filename,"':")
@@ -94,27 +101,22 @@ class LinearComplementarityProblem:
             while k < len(words):
                 if words[k]=="M=":
                     k+=1
-                    auxM = utils.tomatrix(n,n,words,k)
-                    print(auxM)
+                    self.M = utils.tomatrix(n,n,words,k)
                     k+= n*n
                 elif words[k]=="q=":
                     k+=1
-                    auxq = utils.tovector(n,words,k)
+                    self.q = utils.tovector(n,words,k)
                     k+=n
                 elif words[k]=="d=":
                     k+=1
-                    auxd = utils.tovector(n,words,k)
+                    self.d = utils.tovector(n,words,k)
                     k+=n
                 else: 
                     printout("in lcp file "+repr(filename)+":")
                     printout("expected one of 'M=' 'q=' 'd=', got",repr(words[k]))
                     exit(1)
-
-            self.M = torch.Tensor(auxM, dtype=torch.float64).to(device)
-            self.q = torch.Tensor(auxq, dtype=torch.float64).to(device)
-            self.d = torch.Tensor(auxd, dtype=torch.float64).to(device)         
             return 
-
+
     def __str__(self):
         n=self.n
         M=self.M
@@ -138,7 +140,7 @@ class LinearComplementarityProblem:
         # printout("M[0][0]", type(M[0][0]))
         return "n= "+str(n)+"\n"+str(m)
     #######  end of class lcp
-
+
 class Tableau:
     # filling the tableau from the LCP instance Mqd
     def __init__(self, Mqd): 
@@ -347,7 +349,7 @@ class Tableau:
                 else:
                     stats.sprint("-")
         printout(stats) 
-
+
     # returns leave,z0leave
     # leave = leaving variable in VARS, given by lexmin row,
     # when enter in VARS is entering variable
@@ -472,7 +474,7 @@ class Tableau:
         self.bascobas[enter] = row
         self.whichvar[row]   = enter
     ###### end of  pivot (leave, enter) 
-
+
     def runLemkeHowson(self,*,verbose=False,lexstats=False,z0=False,silent=False):
         global filehandle
         # z0: printout value of z0
@@ -532,7 +534,7 @@ class Tableau:
         if (lexstats):
             self.outstatistics()
     #######  end of class tableau
-
+
 if __name__ == "__main__":
     # m = lcp(3)
     # m.M[0][1] = fractions.Fraction(2,3)
