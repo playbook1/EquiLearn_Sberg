@@ -59,7 +59,7 @@ accuracy = 1000
 
 # amends defaults
 def processArguments():
-    global gamefilename,gz0,LHstring,seed,trace,accuracy
+    global gamefilename,cgz0, LHstring, seed, trace, accuracy
     arglist = sys.argv[1:]
     setLH = False
     settrace = False
@@ -219,6 +219,7 @@ class Bimatrix:
         self.A = PayoffMatrix(m,n)
         self.B = PayoffMatrix(m,n)
 
+    
     # create A,B from file
     def __init__(self, filename):
         lines = utils.stripcomments(filename)
@@ -270,7 +271,7 @@ class Bimatrix:
             lcp.d[i]=1
         return lcp
 
-
+
     def runLH(self, droppedlabel):
         lcp = self.createLCP()
         lcp.d[droppedlabel-1] = 0  # subsidize this label
@@ -410,7 +411,7 @@ if __name__ == "__main__":
     processArguments()
     printglobals()
 
-    G = Bimatrix(None, 3,3)
+    G = Bimatrix( 3,3)
     print(G)
 
     eqset = G.LemkeHowson(LHstring)

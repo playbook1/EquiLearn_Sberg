@@ -6,6 +6,7 @@ from torch.distributions import Normal
 
 class Actor(nn.Module):
     def __init__(self, input_dim):
+        """Input are the states. Output are parameters to a Normal Distribution"""
         super(Actor, self).__init__()
         self.fc1 = nn.Linear(input_dim, 128)
         self.fc2 = nn.Linear(128, 128)
@@ -21,6 +22,7 @@ class Actor(nn.Module):
 
 class Critic(nn.Module):
     def __init__(self, input_dim):
+        """Input is the state and output is a value function"""
         super(Critic, self).__init__()
         self.fc1 = nn.Linear(input_dim, 128)
         self.fc2 = nn.Linear(128, 128)
@@ -41,7 +43,7 @@ class ActorCritic:
         self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=actor_lr)
         self.critic_optimizer = optim.Adam(self.critic.parameters(), lr=critic_lr)
     
-    def select_action(self, state):
+    def sample_action(self, state):
         state = state.to(self.device)
         mean, f = self.actor(state)
         std = torch.exp(f)
@@ -65,6 +67,7 @@ class ActorCritic:
         critic_loss.backward()
         self.critic_optimizer.step()
         
+        # Actor Update
         advantage = (target - value).detach()
         actor_loss = -log_prob * advantage
   
