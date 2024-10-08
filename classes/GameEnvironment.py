@@ -10,7 +10,6 @@ class GameEnvironment(gym.Env):
 
 
     def __init__(self, alpha, N, T):
-
         self.N: int = N
         self.T: int = T
         self.price = torch.zeros((self.N,self.T), dtype = torch.float32)
@@ -30,10 +29,9 @@ class GameEnvironment(gym.Env):
 
 class ModelGameEnvironment(GameEnvironment):
 
-    def __init__(self, alpha, N, gamma, T, demand = 100):
+    def __init__(self, alpha, N, T, demand = 100):
         super().__init__(alpha, N, T)
-        self.gamma = gamma
-        self.init_state = torch.Tensor([50,50])
+        self.init_state = torch.Tensor([0,0])
         self.demand = demand
         self.alpha = alpha
 
@@ -44,7 +42,7 @@ class ModelGameEnvironment(GameEnvironment):
             self.price[agent,self.t] = action_profile[agent]
 
         for agent in range(0,self.N):
-            self.profit[agent,self.t] = action_profile[agent]*(self.demand + self.alpha*action_profile[-1*(self.N -(agent+1))] - action_profile[agent])
+            self.profit[agent,self.t] = action_profile[agent]*(self.demand + self.alpha*action_profile[-1*(self.N -(agent+1) )] - action_profile[agent])
         
         # compute next state, reaward profile, 
         new_state = self.price[:,self.t]
