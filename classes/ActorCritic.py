@@ -46,8 +46,7 @@ class ActorCritic:
     def sample_action(self, state):
         state = state.to(self.device)
         mean, f = self.actor(state)
-        std = torch.exp(f)
-  
+        std = torch.clamp(f, min=1e-6)
         dist = Normal(mean,std)
         action = dist.sample()
         return action, dist.log_prob(action)
@@ -65,12 +64,14 @@ class ActorCritic:
         critic_loss = (target - value) ** 2
         self.critic_optimizer.zero_grad()
         critic_loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.critic.parameters(), max_norm=1.0)
         self.critic_optimizer.step()
-        
+
         # Actor Update
         advantage = (target - value).detach()
         actor_loss = -log_prob * advantage
   
         self.actor_optimizer.zero_grad()
         actor_loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.actor.parameters(), max_norm=1.0)
         self.actor_optimizer.step()
