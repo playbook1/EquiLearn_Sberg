@@ -61,7 +61,7 @@ class ModelGameEnvironment(DemandInertiaGame):
         super().__init__(N, total_demand,vector_costs,total_stages)
 
         self.reward_function = self.profits
-        self.init_state = torch.Tensor([0,0,200,200])
+        self.init_state = torch.Tensor([57,71,200,200])
         #self.episodesMemory = list()
 
     def reset(self):

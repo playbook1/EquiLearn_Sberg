@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import numpy as np
-from torch.distributions import Normal
+from torch.distributions import Gamma
 
 class Actor(nn.Module):
     def __init__(self, input_dim):
@@ -11,6 +11,12 @@ class Actor(nn.Module):
         self.fc1 = nn.Linear(input_dim, 128)
         self.fc2 = nn.Linear(128, 128)
         self.fc3 = nn.Linear(128, 2)
+
+    def _initialize_weights(self):
+        # Apply Xavier initialization to the layers
+        torch.nn.init.xavier_uniform_(self.fc1.weight)
+        torch.nn.init.xavier_uniform_(self.fc2.weight)
+        torch.nn.init.xavier_uniform_(self.fc3.weight)
 
     
     def forward(self, x):
@@ -45,9 +51,11 @@ class ActorCritic:
     
     def sample_action(self, state):
         state = state.to(self.device)
-        mean, f = self.actor(state)
-        std = torch.clamp(f, min=1e-6)
-        dist = Normal(mean,std)
+        shape, scale = self.actor(state)
+
+        shape = torch.clamp(shape, min=1e-6)
+        scale = torch.clamp(scale, min=1e-6)
+        dist = Gamma(shape, scale)
         action = dist.sample()
         return action, dist.log_prob(action)
     
