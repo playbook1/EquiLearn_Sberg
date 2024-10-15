@@ -8,8 +8,9 @@ from numpy.random import choice
 
 class MemorylessPricingGame(gym.env):
     # The base game has 2 players playing a pricing game
-    # U1 = x(100+ay-x)
-    # U2 = y(100+ax-y)
+    # Ux = Px(100+aPy-Px)
+    # Uy = Py(100+aPx-Py)
+    #
     # Best response equilibrium : x = y = 100/(2-a)
     # Total utility = x^2 + y^2
     # Collusive strategy equilibrium : x = y = 50/(1-a)
